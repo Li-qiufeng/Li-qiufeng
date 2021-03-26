@@ -1,0 +1,54 @@
+#!/usr/bin/bash
+#多源复制MMSS 之M1
+############################安装mysql######################################
+rpm -q expect &>/dev/null
+if [ $? -eq 1 ];then
+        yum -y install expect
+fi
+cat >>/etc/yum.repos.d/mysql.repo <<-EOF
+[mysql]
+name=mysql
+baseurl=ftp://10.18.42.185/mysql
+gpgcheck=0
+EOF
+yum repolist
+yum -y install mysql-community-server-5.7.19-1.el7.x86_64
+##############################配置环境######################################
+ip123=`ip a|grep 'inet 192'|awk '{print $2}' |awk -F"/" '{print $1}'`
+hou=${ip123:12:3}
+passwd=centos
+systemctl start mysqld
+chown -R mysql.mysql /var/lib/mysql
+aaa=`grep 'temporary password' /var/log/mysqld.log |awk '{print $NF}'`
+mysqladmin -uroot -p"$aaa" password '(TianYunYang123)' 
+cat >> /etc/my.cnf <<-EOF
+log-bin
+slow_query_log=1
+slow_query_log_file=/var/log/mysql-slow/slow.log
+long_query_time=3
+server-id=$hou
+EOF
+############################授权  数据导出#################################
+systemctl restart mysqld
+mysql -p'(TianYunYang123)' <<-YUE
+grant replication slave,replication client on *.* to 'rep'@'192.168.122.%' identified by '(TianYunYang123)';
+flush privileges;
+\q
+YUE
+mysqldump -p'(TianYunYang123)' --all-databases  --single-transaction --master-data=1 --flush-logs >master1
+while read line
+do
+	if [ "$ip123" -eq "$line" ];then
+		echo "tiaoguo"
+	else
+		/usr/bin/expect <<-YANG
+		set timeout 10
+		spawn  scp master1 $line:/root
+		expect {
+		"(yes/no)?"  { send "yes\r"; exp_continue }
+		"password:" { send "$passwd\r" ; exp_continue };
+		}
+		expect eof
+		YANG
+	fi
+done < ip.txt

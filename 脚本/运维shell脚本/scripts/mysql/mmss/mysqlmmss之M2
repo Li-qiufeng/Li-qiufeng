@@ -1,0 +1,61 @@
+#!/usr/bin/bash
+#多源复制MMSS 之M2
+############################安装mysql######################################
+rpm -q expect &>/dev/null
+if [ $? -eq 1 ];then
+	yum -y install expect
+fi
+cat >>/etc/yum.repos.d/mysql.repo <<-EOF
+[mysql]
+name=mysql
+baseurl=ftp://10.18.42.185/mysql
+gpgcheck=0
+EOF
+yum repolist
+yum -y install mysql-community-server-5.7.19-1.el7.x86_64
+##############################配置环境######################################
+ip123=`ip a|grep 'inet 192'|awk '{print $2}' |awk -F"/" '{print $1}'`
+hou=${ip123:12:3}
+passwd=centos
+systemctl start mysqld
+chown -R mysql.mysql /var/lib/mysql
+aaa=`grep 'temporary password' /var/log/mysqld.log |awk '{print $NF}'`
+mysqladmin -uroot -p"$aaa" password '(TianYunYang123)'
+cat >> /etc/my.cnf <<-EOF
+log-bin
+slow_query_log=1
+slow_query_log_file=/var/log/mysql-slow/slow.log
+long_query_time=3
+server-id=$hou
+EOF
+systemctl restart mysqld
+############################## 导出数据 ######################################
+mysqldump -p'(TianYunYang123)' --all-databases  --single-transaction --master-data=1 --flush-logs >master2
+while read line
+do
+	if [ "$ip123" -eq "$line" ];then
+		echo "tiaoguo"
+	else
+		/usr/bin/expect <<-YANG
+		set timeout 10
+		spawn  scp master2 $line:/root
+		expect {
+		"(yes/no)?"  { send "yes\r"; exp_continue }
+		"password:" { send "$passwd\r" ; exp_continue };
+		}
+		expect eof
+		YANG
+	fi
+done < ip.txt
+############################## 导入数据 ######################################
+mysql -p'(TianYunYang123)' < master1
+log=`grep 'master1' ./master1 |awk -F"'" '{print $2}'`
+pos=`grep 'master1' ./master1 |awk -F"," '{print $2}'|awk -F";" '{print $1}'|awk -F"=" '{print $2}'`
+mysql -p'(TianYunYang123)' -e"change master to master_host='master1', master_user='rep',master_password='(TianYunYang123)',master_log_file='$log',master_log_pos=$pos"
+mysql -p'(TianYunYang123)'<<-YUE
+start slave;
+reset master;
+show slave status\G;
+\q
+YUE
+systemctl restart mysqld

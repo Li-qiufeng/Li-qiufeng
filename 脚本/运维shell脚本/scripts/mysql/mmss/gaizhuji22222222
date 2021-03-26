@@ -1,0 +1,11 @@
+list1=(`cat /root/mysql/ip.txt`)
+list2=(`cat /root/mysql/zhuji`)
+ssh ${list1[0]} "hostnamectl set-hostname ${list2[0]};systemctl stop firewalld;systemctl enable firewalld"
+ssh ${list1[1]} "hostnamectl set-hostname ${list2[1]};systemctl stop firewalld;systemctl enable firewalld"
+ssh ${list1[2]} "hostnamectl set-hostname ${list2[2]};systemctl stop firewalld;systemctl enable firewalld"
+ssh ${list1[3]} "hostnamectl set-hostname ${list2[3]};systemctl stop firewalld;systemctl enable firewalld"
+ssh ${list1[4]} "hostnamectl set-hostname ${list2[4]};systemctl stop firewalld;systemctl enable firewalld"
+while read line
+do
+	scp /root/mysql/hosts $line:/etc/hosts
+done <ip.txt

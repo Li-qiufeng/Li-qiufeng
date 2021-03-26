@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+#########################导入master2的master信息################################
+log=`grep 'master2-bin.000' ./master2 |awk -F"'" '{print $2}'`
+pos=`grep 'master2-bin.000' ./master2 |awk -F"," '{print $2}'|awk -F";" '{print $1}'|awk -F"=" '{print $2}'`
+mysql -p'(TianYunYang123)' -e"change master to master_host='master2', master_user='rep',master_password='(TianYunYang123)',master_log_file='$log',master_log_pos=$pos"
+mysql -p'(TianYunYang123)'<<-EOF
+start slave;
+show slave status\G;
+\q
+EOF

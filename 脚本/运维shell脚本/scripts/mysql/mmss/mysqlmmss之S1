@@ -1,0 +1,56 @@
+#!/usr/bin/bash
+#10.18.42.185上建mysql源，虚拟机从自建源安装mysql的脚本
+#需要事先传到虚拟机上，再执行
+rpm -q expect &>/dev/null
+if [ $? -eq 1 ];then
+        yum -y install expect
+fi
+touch /etc/yum.repos.d/mysql.repo
+cat >>/etc/yum.repos.d/mysql.repo <<-EOF
+[mysql]
+name=mysql
+baseurl=ftp://10.18.42.185/mysql
+gpgcheck=0
+EOF
+yum repolist
+yum -y install mysql-community-server-5.7.19-1.el7.x86_64
+ip123=`ip a|grep 'inet 192'|awk '{print $2}' |awk -F"/" '{print $1}'`
+hou=${ip123:12:3}
+passwd=centos
+
+systemctl stop firewalld
+systemctl disable firewalld
+setenforce 0
+#while read line; do aaa1=${line:12:19}; sed -i '1i'$line'' /etc/hosts ; sed -i '/^'$line'.*$/s//& '$1$aaa1'/g' /etc/hosts; done <ip.txt
+
+systemctl start mysqld
+chown -R mysql.mysql /var/lib/mysql
+sleep 3
+aaa=`grep 'temporary password' /var/log/mysqld.log |awk '{print $NF}'`
+mysqladmin -uroot -p"$aaa" password '(TianYunYang123)'  #下面的server-id不能都为1，有需要自己再改
+cat >> /etc/my.cnf <<-EOF
+log-bin
+slow_query_log=1
+slow_query_log_file=/var/log/mysql-slow/slow.log
+long_query_time=3
+master-info-repository=TABLE
+relay-log-info-repository=TABLE
+EOF
+echo "server-id=$hou" >>/etc/my.cnf
+systemctl restart mysqld
+
+
+mysql -p'(TianYunYang123)' < master1
+
+log1=`grep 'master1' ./master1 |awk -F"'" '{print $2}'`
+pos1=`grep 'master1' ./master1 |awk -F"," '{print $2}'|awk -F";" '{print $1}'|awk -F"=" '{print $2}'`
+
+log2=`grep 'master2-bin.000' ./master2 |awk -F"'" '{print $2}'`
+pos2=`grep 'master2-bin.000' ./master2 |awk -F"," '{print $2}'|awk -F";" '{print $1}'|awk -F"=" '{print $2}'`
+
+mysql -p'(TianYunYang123)' -e"change master to master_host='master1', master_user='rep',master_password='(TianYunYang123)',master_log_file='$log1',master_log_pos=$pos1 for channel 'master1-channel';"
+mysql -p'(TianYunYang123)' -e"change master to master_host='master2', master_user='rep',master_password='(TianYunYang123)',master_log_file='$log2',master_log_pos=$pos2 for channel 'master2-channel';"
+mysql -p'(TianYunYang123)'<<-EOF
+start slave;
+\q
+EOF

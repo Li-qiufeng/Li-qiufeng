@@ -1,0 +1,24 @@
+#!/usr/bin/bash
+#mysql从自建yum源处安装
+while read line
+do
+	#scp mysqlxu虚拟机从185装  $line:/root
+	scp mysqlmmss之M1 $line:/root
+	scp ip.txt $line:/root
+	scp mysqlmmss之M1-1 $line:/root
+	scp mysqlmmss之M2 $line:/root	
+	scp mysqlmmss之S1 $line:/root	
+	#scp jdk-8u144-linux-x64.tar.gz?AuthParam=1505982270_1a0748cd336f80dec6db49027f63d260 $line:/root
+	#scp Mycat-server-1.6-RELEASE-20161028204710-linux.tar.gz $line:/root
+done <ip.txt                                	
+                                            	
+                                            	
+                                            	
+                                            	
+                                            	
+                                            	
+                                            	
+                                            	
+                                            	
+                                            	
+                                            	

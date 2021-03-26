@@ -1,0 +1,98 @@
+#!/usr/bin/bash
+#mysql多源复制 MMSS 脚本批量安装
+#v1.0 by caiquan 2017-09-23
+##################配置基本的文件###########################
+hhh(){
+cat >> /root/mysql/zhuji <<-EOF
+master1
+master2
+slave1
+slave2
+mycat
+EOF
+}
+ddd=38
+[ -d /root/mysql ]        && echo "ok." || mkdir /root/mysql
+[ -f /root/mysql/hosts ]  && echo "ok." || touch /root/mysql/hosts
+[ -f /root/mysql/ip.txt ] && echo "ok." || touch /root/mysql/ip.txt
+[ -f /root/mysql/zhuji ]
+if [ $? -eq 0 ];then
+	zi=`ls -l /root/mysql/zhuji |awk '{print $5}'`
+	if [ $zi -eq $ddd ];then
+		cat /root/mysql/zhuji
+	else
+		>/root/mysql/zhuji
+		hhh
+	fi
+else
+	hhh
+fi
+#####################推密钥############################
+>/root/mysql/hosts
+>/root/mysql/ip.txt
+passwd=centos
+client=centos7u3-
+
+for d in {1..5}
+do
+        virsh start $client$d
+done
+sleep 35
+
+rpm -q expect &>/dev/null
+if [ $? -eq 1 ];then
+	yum -y install expect
+fi
+
+if [ ! -f ~/.ssh/id_rsa ];then
+	ssh-keygen -P "" -f ~/.ssh/id_rsa &>/dev/null
+fi
+
+for i in {2..254}
+do
+	{
+	ip1=192.168.122.$i
+	ping -c1 -W1 $ip1 &>/dev/null
+	if [ $? -eq 0 ];then
+		echo "$ip1" >>/root/mysql/ip.txt
+		/usr/bin/expect <<-EOF
+		set timeout 10
+		spawn ssh-copy-id $ip1
+		expect {
+			"yes/no" { send "yes\r"; exp_continue }
+			"password:" { send "$passwd\r" }
+		}
+		expect eof
+		EOF
+	fi
+	}&
+done
+wait
+clear
+cat /root/mysql/ip.txt
+cat /root/mysql/zhuji
+##########################改主及名  hosts文件########################################
+qqq=0
+list=(`cat /root/mysql/zhuji`)
+while read line
+do
+	echo "$line ${list[qqq]}" >>/root/mysql/hosts
+	qqq=$qqq+1
+done</root/mysql/ip.txt
+
+while read line1
+do
+	scp /root/mysql/ip.txt $line1:/root
+	scp /root/mysql/hosts $line1:/etc/hosts
+	scp /root/mysql/mysqlmmss之M1 $line1:/root
+	scp /root/mysql/mysqlmmss之M1-1 $line1:/root
+	scp /root/mysql/mysqlmmss之M2 $line1:/root
+	scp /root/mysql/mysqlmmss之S $line1:/root
+done </root/mysql/ip.txt
+
+list1=(`cat /root/mysql/ip.txt`)
+for i1 in {0..4}
+do
+	ssh ${list1[$i1]} "hostnamectl set-hostname ${list[$i1]};systemctl stop firewalld;systemctl disable firewalld;setenforce 0;sed -ri '/^SELINUX=/cSELINUX=disabled' /etc/selinux/config"
+done
+cat /root/mysql/ip.txt
