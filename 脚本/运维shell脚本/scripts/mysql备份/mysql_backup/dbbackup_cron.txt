@@ -1,0 +1,13 @@
+#mysql slow log split
+5 * * * * sh /home/mysql/cron/script/slowlog_split.sh >> /home/mysql/cron/log/slowlog_split.log 2>&1
+
+#mysql mysqldump backup
+01 01 * * * sh /home/mysql/cron/script/mysqldump.sh >>/home/mysql/cron/log/mydumper_logical.log 2>&1
+
+#mysql_xtrabackup_full_task
+01 2 * * 0 sh /home/mysql/cron/script/xtrabackup_full.sh
+#49 16 * * * sh /home/mysql/cron/script/xtrabackup_full.sh
+
+#mysql_xtrabackup_incr_task
+01 2 * * 1-6 sh /home/mysql/cron/script/xtrabackup_incr.sh
+#50 16 * * * sh /home/mysql/cron/script/xtrabackup_incr.sh
