@@ -1,0 +1,49 @@
+- name: handlers playbook example
+  hosts: dbservers
+  gather_facts: no
+  vars:
+    createuser:
+      - tomcat
+      - www
+      - mysql
+  tasks:
+    - name: 创建用户
+      user: name={{ item }} state=present
+      with_items: "{{ createuser }}"
+
+    - name: 安装 nginx
+      yum: name=nginx state=present
+
+    - name: 更新nginx主配置
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+      tags: updateconfig
+      notify: 重新加载nginx服务器
+
+    - name: 添加虚拟主机配置
+      copy: src=www.qfedu.com.conf dest=/etc/nginx/conf.d/
+      tags: updateconfig
+      notify: 重新加载nginx服务器
+
+    - name: 检查nginx语法
+      shell: /usr/sbin/nginx -t
+      register: nginxsyntax
+      tags: updateconfig
+
+    - name: 检查nginx运行情况
+      stat: path=/var/run/nginx.pid
+      register: nginxrunning
+      tags: updateconfig
+
+    - name: 启动nginx服务器
+      service: name=nginx state=started
+      when:
+        - nginxsyntax.rc == 0
+        - nginxrunning.stat.exists == false
+  handlers:
+    - name: 重新加载nginx服务器
+      service: name=nginx state=reloaded
+      when:
+        - nginxsyntax.rc == 0
+        - nginxrunning.stat.exists == true

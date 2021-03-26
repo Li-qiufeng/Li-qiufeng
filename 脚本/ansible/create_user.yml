@@ -1,0 +1,15 @@
+---
+- name: 创建用户
+  hosts: all
+  remote_user: root
+  vars:
+    user: liqiufeng
+    home_dir: /home/1
+  tasks:
+    - name: 创建用户 {{ user }}
+      user:
+        name: "{{ user }}"
+        home: "{{ home_dir }}"
+    - name: 验证用户 {{ user }}
+      shell: id {{user}}
+...

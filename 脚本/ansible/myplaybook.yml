@@ -1,0 +1,14 @@
+---
+- name: the first play example
+  hosts: all
+  remote_user: root
+  tasks:
+    - name: install nginx package
+      yum: name=nginx state=present
+    - name: copy nginx.conf to remote server
+      copy: src=nginx.conf dest=/etc/nginx/nginx.conf
+    - name: start nginx server
+      service:
+        name: nginx
+        enabled: true
+        state: started

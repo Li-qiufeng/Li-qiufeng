@@ -1,0 +1,81 @@
+---
+- name: 一本
+  hosts: webservers
+  remote_user: root
+  vars:
+    createuser:
+      - tom
+      - join
+      - tony
+
+  tasks:
+    - name: 创建用户
+      debug:
+        var: "{{ item }}"
+      loop: "{{ createuser }}"
+
+    - name: 安装nginx包
+      yum: name=nginx state=present
+
+    - name: 更新nginx主配置
+      template: 
+        src: /root/ansible/nginx.conf.j2 
+        dest: /etc/nginx/nginx.conf
+      notify: reload nginx server
+      tags: updateconfig
+
+    - name: 添加虚拟主机配置
+      copy: 
+        src: /root/ansible/www.qfedu.com.conf
+        dest: /etc/nginx/nginx.d
+      notify: reload nginx server
+      tags: updateconfig
+
+    - name: 检查nginx语法
+      shell: /usr/sbin/nginx -t 
+      register: nginxsyntax
+      tags: updateconfig
+
+    - name: 检查nginx运行情况
+      stat: path=/var/run/nginx.pid
+      register: nginxrun
+
+#    - name: print nginxsyntax
+#      debug: var=nginxsyntax
+    
+#    - name: print nginxrunning
+#      debug: var=nginxrunning
+
+    - name: 关闭nginx服务
+      systemd: name=nginx state=stopped
+      when:
+        - nginxsyntax.rc == 0
+        - nginxrun.stat.exists == true
+
+
+    - name: 检查nginx语法
+      shell: /usr/sbin/nginx -t
+      register: nginxsyntax
+      tags: updateconfig
+
+    - name: 检查nginx运行情况
+      stat: path=/var/run/nginx.pid
+      register: nginxrunning
+      tags: updateconfig
+
+    - name: 启动nginx服务
+      systemd: name=nginx state=started
+      when:
+        - nginxsyntax.rc == 0
+        - nginxrunning.stat.exists == true
+
+  handlers:
+    - name: reload nginx server
+      systemd: name=nginx state=reloaded
+      when:
+        - nginxsyntax.rc == 0
+        - nginxrunning.stat.exists == true
+
+
+
+

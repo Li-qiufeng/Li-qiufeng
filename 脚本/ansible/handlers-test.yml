@@ -1,0 +1,19 @@
+---
+- name: test handlers
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: copy a file to remote server
+      copy:
+        src: a.txt
+        dest: /tmp/a.txt
+      notify: 
+        - ping a remote server
+        - 连接测试
+  handlers:
+    - name: ping a remote server
+      ping:
+
+    - name: 连接测试
+      ping:
+...

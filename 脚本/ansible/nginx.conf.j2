@@ -1,0 +1,36 @@
+user              nginx;
+{# start process equal cpu cores #}
+worker_processes {{ ansible_processor_vcpus }};
+
+error_log  /var/log/nginx/error.log;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    sendfile        on;
+    tcp_nopush     on;
+
+    keepalive_timeout  0;
+
+    gzip on;
+    gzip_min_length  1k;
+    gzip_buffers     8 64k;
+    gzip_http_version 1.0;
+    gzip_comp_level 5;
+    gzip_types   text/plain application/x-javascript text/css application/json application/xml application/x-shockwave-flash application/javascript image/svg+xml image/x-icon;
+    gzip_vary on;
+    {# add_header {{ ansible_hostname }}; #}
+    add_header x-hostname {{ ansible_hostname  }};
+
+    include /etc/nginx/conf.d/*.conf;
+}

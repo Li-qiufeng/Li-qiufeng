@@ -1,0 +1,13 @@
+---
+- name: register var
+  hosts: all
+#  gather_facts: no  #关闭变量收集功能
+  tasks:
+    - name: ls /tmp
+      shell: ls /tmp
+      register: a   
+    - name: a
+      debug:
+        var: a.stdout_lines.1
+...
+

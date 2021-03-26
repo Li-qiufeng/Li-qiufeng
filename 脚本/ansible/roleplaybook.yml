@@ -1,0 +1,6 @@
+---
+- name: 使用role
+  hosts: all
+  roles:
+    - nginx
+...
