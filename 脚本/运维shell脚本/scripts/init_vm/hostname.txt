@@ -1,0 +1,5 @@
+master.test.com
+salt1.test.com
+salt2.test.com
+salt3.test.com
+salt4.test.com
